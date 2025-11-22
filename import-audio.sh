@@ -1,8 +1,8 @@
 #!/bin/bash
 
-MODE="mv"
-LIB_ROOT="~/media/music/library"
-declare DIR_SPEC="$GENRE/$ALBUM_ARTIST/$DATE - $album/$TRACK $TITLE"
+MODE="cp"
+LIB_ROOT="/tmp/tmp.ybKMqOcwcr"
+DIR_SPEC="$GENRE/$ALBUM_ARTIST/$DATE - $album/$TRACK $TITLE"
 
 sanitize() {
     echo "$1" | sed 's/[\/:*?"<>|]/_/g'
@@ -57,25 +57,49 @@ sort_dir() {
 
 ### testing for present cover art
 ### Embedding cover art and sorting audio files
-  find "$dir" -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.flac" \) | while read -r file; do
+  #find "$dir" -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.flac" \) | while read -r file; do
+  #  get_tags "$file"
+  #  TRACK=$(printf "%02d\n" "${TRACK%%_*}")
+  #  ext="${file##*.}"
+
+  #  album_dir="$GENRE/$ALBUM_ARTIST/$ALBUM"
+  #  filename="$TRACK $TITLE.$ext"
+
+  #  full_path="$LIB_ROOT/$album_dir/$filename"
+
+  #  echo "  importing file: $file"
+  #  echo "  $full_path"
+  #done
+
+  while read -r file; do
     get_tags "$file"
+
     TRACK=$(printf "%02d\n" "${TRACK%%_*}")
     ext="${file##*.}"
 
-    album_dir="$GENRE/$ALBUM_ARTIST/$ALBUM"
+    album_dir="$LIB_ROOT/$GENRE/$ALBUM_ARTIST/$ALBUM"
     filename="$TRACK $TITLE.$ext"
 
-    full_path="$LIB_ROOT/$album_dir/$filename"
+    full_path="$album_dir/$filename"
 
     echo "  importing file: $file"
+
+    if [[ ! -d "$album_dir" ]]; then
+      mkdir -p "$album_dir"
+    fi
+
+    cp "$file" "$album_dir/$filename"
+
     echo "  $full_path"
-  done
+  done < <(find "$dir" -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.flac" \))
+
 
 ### Procesing cover art once audio files are sorted
 ### Processing any additional files into an "addtl_files" subdirectory
 
   echo "### DONE"
 
+  echo "$LIB_ROOT/$album_dir"
   echo "### EOF"
 
   #unset TITLE ARTIST ALBUM TRACK DISC DATE GENRE ALBUM_ARTIST COMPILATION
