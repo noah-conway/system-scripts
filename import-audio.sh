@@ -22,6 +22,7 @@ cpmv () {
     return 1
   fi
 }
+
 sanitize() {
     echo "$1" | sed 's/[\/:*?"<>|]/_/g'
 }
@@ -105,6 +106,7 @@ embed_coverfile () {
   dest_file=$2
 
   # Ensure id3v2 and metaflac are installed
+  echo "  source image: $1"
   if [[ "$dest_file" == *.mp3 ]]; then
     if [[ $source_image =~ \.jpe?g$ ]]; then
       id3v2 --APIC "$source_image" "$dest_file"
