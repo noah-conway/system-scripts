@@ -67,7 +67,6 @@ sort_file() {
   echo $ALBUM
   echo "$LIB_ROOT/$DIR_SPEC"
 
-
 }
 
 get_cover_file () {
@@ -109,7 +108,16 @@ embed_coverfile () {
   echo "  source image: $1"
   if [[ "$dest_file" == *.mp3 ]]; then
     if [[ $source_image =~ \.jpe?g$ ]]; then
-      id3v2 --APIC "$source_image" "$dest_file"
+      tmpfile=$(mktemp --suffix=".mp3")
+      mv "$dest_file" "$tmpfile"
+      ffmpeg -i "$tmpfile" "$source_image" \
+        -map 0:a -map 1:v \
+        -c copy \
+        -metadata:s:v title="Cover" \
+        -metadata:s:v comment="Cover (front)" \
+        "$dest_file"
+
+    # test if $dest file exists, if so delete temp file
     else
       echo "unsupported image format"
       exit 1
@@ -124,7 +132,6 @@ embed_coverfile () {
     exit 1
   fi
   
-
 }
 
 sort_dir() {
@@ -185,6 +192,6 @@ sort_dir() {
   #unset TITLE ARTIST ALBUM TRACK DISC DATE GENRE ALBUM_ARTIST COMPILATION
 
 }
-export -f sanitize get_tags sort_file sort_dir
 
+export -f sanitize get_tags sort_file sort_dir
 sort_dir "$1"
