@@ -13,7 +13,7 @@ cpmv () {
   local src="$2"
   local dest="$3"
 
-  echo "in cpmv func 2"
+  echo "in cpmv func: $src to $dest"
   if [ $mode = "copy" ]; then
     cp -f "$src" "$dest"
   elif [ $mode = "move"]; then
@@ -107,17 +107,25 @@ embed_coverfile () {
   # Ensure id3v2 and metaflac are installed
   echo "  source image: $1"
   if [[ "$dest_file" == *.mp3 ]]; then
-    if [[ $source_image =~ \.jpe?g$ ]]; then
+    if [[ $source_image =~ \.(jpe?g|png)$ ]]; then
       tmpfile=$(mktemp --suffix=".mp3")
       mv "$dest_file" "$tmpfile"
-      ffmpeg -i "$tmpfile" "$source_image" \
-        -map 0:a -map 1:v \
+      ffmpeg -loglevel error -i "$tmpfile" -i "$source_image" \
+        -map 0:a \
+        -map 1:v \
         -c copy \
-        -metadata:s:v title="Cover" \
+        -metadata:s:v title="Album cover" \
         -metadata:s:v comment="Cover (front)" \
+        -disposition:v:0 attached_pic \
         "$dest_file"
 
     # test if $dest file exists, if so delete temp file
+      if [ -f "$dest_file" ]; then
+        rm "$tmpfile"
+      else
+        echo "Error: ffmpeg unsuccessful for $dest_file, tmp file located in $tmpfile"
+      fi
+
     else
       echo "unsupported image format"
       exit 1
@@ -184,6 +192,7 @@ sort_dir() {
 
 ### Procesing cover art once audio files are sorted
 
+  echo "processing cover art"
   cover_ext="${cover##*.}"
   cpmv $MODE "$dir/$cover" "$album_dir/$COVER_DEST_NAME.$cover_ext"
   
@@ -194,4 +203,11 @@ sort_dir() {
 }
 
 export -f sanitize get_tags sort_file sort_dir
-sort_dir "$1"
+
+dir_to_sort=$1
+
+for dir in $dir_to_sort; do
+  [[ -d "$dir" ]] || continue
+  echo "$1"
+  sort_dir "$1"
+done
