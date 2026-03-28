@@ -1,19 +1,8 @@
 #!/bin/bash
 
-set -o errexit -o nounset -o pipefail
 
 readonly ENV_FILE="/home/noah/dev/system-scripts/restic-backup-dev/.restic.env"
 
-readonly PATHS_TO_BACKUP=(
-        "/home/noah/books"
-        "/home/noah/books2"
-)
-
-# Restic retention policy
-readonly KEEP_DAILY=7
-readonly KEEP_WEEKLY=4
-readonly KEEP_MONTHLY=12
-readonly KEEP_YEARLY=3
 
 #readonly START_HEALTHCHECK_URL
 #readonly END_HEALTHCHECK_URL
@@ -35,39 +24,44 @@ send_alert() {
 error_handler() {
   local exit_code=$?
   local command="$BASH_COMMAND"
-  local message="RESTIC ERROR ON $HOSTNAME: Command $command failed with exit code $exit_code on $(date +"%Y-%m-%d %H:%M:%S")"
-  echo $LOG_BODY
-
-  EXIT_CODE=1
+  local message="RESTIC ERROR ON HOST '$HOSTNAME': Command '$command' failed with exit code $exit_code on $(date +"%Y-%m-%d %H:%M:%S")"
+  log_output "$message"
+  send_alert
 }
 
+
+set -o errexit -o nounset -o pipefail
 trap 'error_handler' ERR
 
 #send healthcheck start
-log_output "$(date) Starting $HOSTNAME restic backup script\nPerforming pre-flight checks..."
+
+echo -e "$(date) Starting $HOSTNAME restic backup script\nPerforming pre-flight checks..."
 
 if [[ ! -f "${ENV_FILE}" ]]; then
-  echo "Env file not found"
-  exit 1
+  echo "FATAL ERROR: .env file not found" >&2
+  false
 fi
 source "${ENV_FILE}"
 
 if [[ -z "${RESTIC_REPOSITORY:-}" ]]; then
-  echo "Repo not set"
-  exit 1
+  echo "FATAL ERROR: Restic repo not set" >&2
+  false
 fi
 
-# backblaze connection check
-
+mkdir -p $RESTIC_CACHE
 
 #run podman DB dumps
 
-log_output "All checks passed\n$(date) Starting restic backup for directories ..."
+echo -e "All checks passed\n$(date) Starting restic backup to ${RESTIC_REPOSITORY}..."
+restic backup ${PATHS_TO_BACKUP[@]} --json
 
-backup_output=$(restic backup ${PATHS_TO_BACKUP[@]} --dry-run)
-log_output "Restic: $backup_output"
+# check backups
+echo -e "Backup successful\n$(date) Validating ${CHECK_SUBSET_G}G subset of backups..."
+restic check --with-cache --read-data-subset=${CHECK_SUBSET_G}G --json
 
-#prune backups
-log_output "$(date) Starting prune"
+echo -e "Validation successful\n$(date) Pruning old snapshots per retention policy..."
+restic forget --prune --keep-daily $KEEP_DAILY --keep-weekly $KEEP_WEEKLY --keep-monthly $KEEP_MONTHLY --keep-yearly $KEEP_YEARLY --json
 
+echo -e "Restic prune successful\nBackup script successful"
 #send healthcheck finish
+exit 0
