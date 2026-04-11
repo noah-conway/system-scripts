@@ -1,12 +1,15 @@
 #!/bin/bash
 
 MODE="copy"
-LIB_ROOT="/home/noah/dev/import-audio/destination"
+DEST_DIR="/home/noah/dev/import-audio/destination"
 DIR_SPEC="$GENRE/$ALBUM_ARTIST/$DATE - $album/$TRACK $TITLE"
 
 COVER_NAMES=("cover" "front" "art")
 COVER_EXTS=("jpg" "jpeg" "png")
 COVER_DEST_NAME="cover"
+
+MOVE_FLAG=0
+
 
 cpmv () {
   local mode="$1"
@@ -158,8 +161,8 @@ sort_dir() {
   local dir="$1"
 
   echo "importing directory '$dir' with parameters:"
-  echo "LIB_ROOT: $LIB_ROOT"
-  echo "MODE: $MODE"
+  echo "LIB_ROOT: $DEST_DIR"
+  echo "MODE: $MOVE_FLAG"
   echo -e "-----------------------------------------------------------------\n"
 
   while read -r file; do
@@ -170,7 +173,7 @@ sort_dir() {
     TRACK=$(printf "%02d\n" "${TRACK%%_*}")
     ext="${file##*.}"
 
-    album_dir="$LIB_ROOT/$GENRE/$ALBUM_ARTIST/$DATE - $ALBUM"
+    album_dir="$DEST_DIR/$GENRE/$ALBUM_ARTIST/$DATE - $ALBUM"
     filename="$TRACK $TITLE.$ext"
 
     full_path="$album_dir/$filename"
@@ -180,6 +183,7 @@ sort_dir() {
 
     mkdir -p "$album_dir"
 
+    echo "Checking for $processed_cover"
     if [[ ! -f "$processed_cover" ]]; then
     
       if [[ -n "$coverfile" ]]; then
@@ -213,7 +217,9 @@ sort_dir() {
     else
       if [[ -f "$full_path" ]]; then
         echo -e "     File import successful. Import path: $full_path"
-
+        if [ $MOVE_FLAG -gt 0 ]; then
+          rm "$file"
+        fi
       else
         echo -e "     ERROR: file import completed, but imported file not detected"
       fi
@@ -229,10 +235,34 @@ sort_dir() {
 
 }
 
-
-
 export -f sanitize get_tags sort_file sort_dir
-sort_dir "$1"
+
+
+while getopts ":s:d:m" opt; do
+  case "$opt" in
+    s) 
+      SOURCE_DIR="$OPTARG" 
+      ;;
+    d) 
+      DEST_DIR="$OPTARG" 
+      ;;
+    m) 
+      MOVE_FLAG=1 
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument"
+      exit 1
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG"
+      exit 1
+      ;;
+  esac
+done
+
+echo "$SOURCE_DIR, $dest_dir, $move_mode"
+
+sort_dir "$SOURCE_DIR"
 
 
 
