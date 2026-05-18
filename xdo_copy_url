@@ -1,0 +1,28 @@
+#!/bin/sh
+
+BRWS=${BROWSER:-"firefox"}
+EXIT_CODE=0
+
+BROWSER_WIN=$(xdotool search --onlyvisible --class "$BRWS" | head -n 1)
+
+if [ -z "$BROWSER_WIN" ]; then
+    msg "$BROWSER_WIN is not running or not visible."
+    EXIT_CODE=1
+fi
+
+xdotool windowactivate "$BROWSER_WIN"
+sleep 0.2 # Brief pause to allow the window to focus
+
+# 3. Simulate keyboard shortcuts: 
+xdotool key --window "$BROWSER_WIN" ctrl+l
+sleep 0.1
+xdotool key --window "$BROWSER_WIN" ctrl+c
+sleep 0.1
+xdotool key --window "$BROWSER_WIN" Escape
+
+CURRENT_URL=$(xclip -selection clipboard -o)
+
+msg="Copied URL: $CURRENT_URL"
+
+notify-send "$msg"
+
