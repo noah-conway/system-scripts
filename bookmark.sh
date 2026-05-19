@@ -6,10 +6,17 @@ PICKERCMD="fzf"
 BROWSERCMD="${BROWSER:-"firefox"}"
 
 add_bookmark () {
-  local URL="$1"
-  local TITLE="$(curl -sL "$URL" | grep -oP '(?<=<title>).*?(?=</title>)' | tr -d ",")"
-  local BKMK_LINE="$TITLE,$URL,$(date +%s)"
   local msg="Added $URL to bookmarks file"
+  local URL="$1"
+  local TITLE="$(curl -sL "$URL" | grep -oP '(?<=<title>).*?(?=</title>)' | tr -d ",")" 
+  
+  if [ -z "$TITLE" ]; then
+    notify-send "Failure | unable to get HTML data via curl"
+    EXIT_CODE=1
+    return
+  fi
+
+  local BKMK_LINE="$TITLE,$URL,$(date +%s)"
 
   if [ ! -f "$BKMK_FILE" ]; then
     mkdir -p "$(dirname $BKMK_FILE)"
