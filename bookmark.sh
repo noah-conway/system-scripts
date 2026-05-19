@@ -8,6 +8,8 @@ BROWSERCMD="${BROWSER:-"firefox"}"
 add_bookmark () {
   local msg="Added $URL to bookmarks file"
   local URL="$1"
+  echo "$URL" | grep -E -q '^(https?://)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*$`' ||
+    notify-send "Failure | invalid URL";exit 1
   local TITLE="$(curl -sL "$URL" | grep -oP '(?<=<title>).*?(?=</title>)' | tr -d ",")" 
   
   if [ -z "$TITLE" ]; then
@@ -24,7 +26,7 @@ add_bookmark () {
   fi
 
   grep -q "$URL" "$BKMK_FILE" && 
-  msg="$URL already exists in bookmarks file";EXIT_CODE=1 ||
+  notify-send "$URL already exists in bookmarks file";exit 1 ||
   echo "$BKMK_LINE" >> "$BKMK_FILE"
 
   notify-send "$msg"
@@ -35,6 +37,7 @@ while getopts ":a:p:b:" opt; do
   case "$opt" in
     a)
       add_bookmark "$OPTARG"
+      echo $EXIT_CODE
       return $EXIT_CODE
       ;;
     p) #specify picker
