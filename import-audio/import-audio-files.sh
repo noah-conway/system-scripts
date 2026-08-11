@@ -72,7 +72,7 @@ sort_file() {
 
 }
 
-get_cover_file () {
+get_cover_file_func () {
 
   local dir=$1
   local coverfile=""
@@ -101,6 +101,24 @@ get_cover_file () {
   coverfile="${matches[0]}"
   echo "$(basename "$coverfile")"
 
+}
+
+find_coverfile_helper() {
+  # takes filename as arg $1
+  #local dir=$(dirname -- "$1")
+  local coverfile=$(find "$1" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \))
+  return "$coverfile"
+
+}
+
+find_coverfile_2dir () {
+  local dir1="$1"
+  local dir2="$2"
+
+  local coverfile=$(find_coverfile_helper "$dir1") && [ "$coverfile" -eq 0 ] || return "$coverfile"
+  local coverfile=$(find_coverfile_helper "$dir2") && [ "$coverfile" -eq 0 ] || return "$coverfile"
+  return 0
+  
 }
 
 embed_coverfile () {
@@ -145,11 +163,6 @@ embed_coverfile () {
   
 }
 
-get_coverfile () {
-  # takes filename as arg $1
-  local dir=$(dirname -- "$1")
-  coverfile=$(find "$dir" -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \))
-}
 
 sort_dir() {
 
@@ -167,8 +180,6 @@ sort_dir() {
 
   while read -r file; do
     get_tags "$file"
-    get_coverfile "$file"
-    cover_ext="${coverfile##*.}"
 
     TRACK=$(printf "%02d\n" "${TRACK%%_*}")
     ext="${file##*.}"
@@ -177,6 +188,12 @@ sort_dir() {
     filename="$TRACK $TITLE.$ext"
 
     full_path="$album_dir/$filename"
+
+    file_source_dir=$(dirname -- "$file")
+    coverfile=$(get_coverfile_2dir "$file_source_dir" "$album_dir")
+    [ "$coverfile" -eq 0 ] && echo "No cover art found for $file" && return 1
+    echo "Cover art found at $coverfile"
+    cover_ext="${coverfile##*.}"
     processed_cover="$album_dir/$COVER_DEST_NAME.$cover_ext"
 
     echo -e "--> Importing file: $file..."
