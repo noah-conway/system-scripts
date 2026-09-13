@@ -2,7 +2,7 @@
 # Simple power menu with dmenu
 
     
-case "$(echo -e "Shutdown\nRestart\nLogout\nSuspend\nQuit" | dmenu \
+case "$(echo -e "Shutdown\nRestart\nLogout\nSuspend\nQuit\nBIOS" | dmenu \
     -nb "${COLOR_BACKGROUND:-#151515}" \
     -nf "${COLOR_DEFAULT:-#aaaaaa}" \
     -sf "${COLOR_HIGHLIGHT:-#589cc5}" \
@@ -14,5 +14,6 @@ case "$(echo -e "Shutdown\nRestart\nLogout\nSuspend\nQuit" | dmenu \
         Logout) exec loginctl terminate-user $(whoami);;
         Suspend) exec systemctl suspend;;
         Lock) exec systemctl --user start lock.target;;
-        Quit) exec pkill dwm
+        Quit) exec pkill dwm ;;
+        BIOS) exec systemctl reboot --firmware-setup ;;
 esac
